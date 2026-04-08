@@ -1,9 +1,10 @@
 from typing import List
 from fastapi import FastAPI, Depends, status, Response , HTTPException
 from . import models, schemas
-from .database import engine, SessionLocal
+from .database import engine, SessionLocal,get_db
 from sqlalchemy.orm import Session
 from .hashing import Hash
+from .routers import blog, user
 
 
 
@@ -12,81 +13,83 @@ app = FastAPI()
 
 models.Base.metadata.create_all(bind = engine)
 
+app.include_router(blog.router)
+app.include_router(user.router)
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# def get_db():
+#     db = SessionLocal()
+#     try:
+#         yield db
+#     finally:
+#         db.close()
 
-@app.post('/blog',  status_code = status.HTTP_201_CREATED, tags=['blog'])
-def create_db(request : schemas.Blog, db:Session = Depends(get_db)):
-    new_blog = models.Blog(title = request.title, body = request.body, user_id=1)
-    db.add(new_blog)
-    db.commit()
-    db.refresh(new_blog)
-    return new_blog
+# @app.post('/blog',  status_code = status.HTTP_201_CREATED, tags=['blog'])
+# def create_db(request : schemas.Blog, db:Session = Depends(get_db)):
+#     new_blog = models.Blog(title = request.title, body = request.body, user_id=1)
+#     db.add(new_blog)
+#     db.commit()
+#     db.refresh(new_blog)
+#     return new_blog
 
-@app.get('/blog' , response_model = List[schemas.ShowBlog], tags=['blog'])
-def all(db : Session = Depends(get_db)):
-    db = db.query(models.Blog).all()
+# @app.get('/blog' , response_model = List[schemas.ShowBlog], tags=['blog'])
+# def all(db : Session = Depends(get_db)):
+#     db = db.query(models.Blog).all()
 
-    return db 
+#     return db 
 
-@app.get('/blog/{id}', status_code = 200 , response_model = schemas.ShowBlog, tags=['blog'])
-def show(id:int, response : Response,  db : Session = Depends(get_db)):
-    db=db.query(models.Blog).filter(models.Blog.id == id).first()
-    if not db :
-        raise HTTPException(status_code = status.HTTP_404_NOT_FOUND, detail=f'Blog for id {id} is not available')
-        # response.status_code = status.HTTP_404_NOT_FOUND
-        # return {'detail': f'Blog for id {id} is not available'}
+# @app.get('/blog/{id}', status_code = 200 , response_model = schemas.ShowBlog, tags=['blog'])
+# def show(id:int, response : Response,  db : Session = Depends(get_db)):
+#     db=db.query(models.Blog).filter(models.Blog.id == id).first()
+#     if not db :
+#         raise HTTPException(status_code = status.HTTP_404_NOT_FOUND, detail=f'Blog for id {id} is not available')
+#         # response.status_code = status.HTTP_404_NOT_FOUND
+#         # return {'detail': f'Blog for id {id} is not available'}
 
-    return db 
+    # return db 
 
-@app.delete('/blog/{id}',status_code = status.HTTP_204_NO_CONTENT, tags=['blog'])
-def delete(id, db :Session = Depends(get_db)):
-    blog = db.query(models.Blog).filter(models.Blog.id == id)
-    if not blog:
-        raise HTTPException(status_code = status.HTTP_404_NOT_FOUND,  detail = f'Blog id {id} not found')
+# @app.delete('/blog/{id}',status_code = status.HTTP_204_NO_CONTENT, tags=['blog'])
+# def delete(id, db :Session = Depends(get_db)):
+#     blog = db.query(models.Blog).filter(models.Blog.id == id)
+#     if not blog:
+#         raise HTTPException(status_code = status.HTTP_404_NOT_FOUND,  detail = f'Blog id {id} not found')
     
-    blog.delete(synchronize_session = False)
-    db.commit()
-    return 'done'
+#     blog.delete(synchronize_session = False)
+#     db.commit()
+#     return 'done'
 
-@app.put('/blog/{id}',status_code = status.HTTP_202_ACCEPTED, tags=['blog'])
-def update(id, request : schemas.Blog, db : Session = Depends(get_db)):
-
-
-    blog=db.query(models.Blog).filter(models.Blog.id == id)
-    if not blog:
-        raise HTTPException(status_code = status.HTTP_404_NOT_FOUND,  detail = f'Blog id {id} not found')
-
-    blog.update(request.dict())
-    db.commit()
-    return request
+# @app.put('/blog/{id}',status_code = status.HTTP_202_ACCEPTED, tags=['blog'])
+# def update(id, request : schemas.Blog, db : Session = Depends(get_db)):
 
 
-@app.post('/user', status_code = status.HTTP_201_CREATED, response_model = schemas.ShowUser, tags=['user'])
-def user_add(request : schemas.User,db : Session = Depends(get_db)):
-    # if len(request.password.encode("utf-8")) > 72:
-    #     raise HTTPException(
-    #         status_code=400,
-    #         detail="Password must be 72 bytes or fewer"
-    #     )
+    # blog=db.query(models.Blog).filter(models.Blog.id == id)
+    # if not blog:
+    #     raise HTTPException(status_code = status.HTTP_404_NOT_FOUND,  detail = f'Blog id {id} not found')
 
-    # hass_password = pwd_cxt.hash(request.password)
-    new_user = models.User(name=request.name, email=request.email, password = Hash.bcrypt(request.password))
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+    # blog.update(request.dict())
+    # db.commit()
+    # return request
 
-    return new_user
 
-@app.get('/user/{id}', status_code = status.HTTP_302_FOUND , response_model = schemas.ShowUser, tags=['user'])
-def show(id : int ,db : Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.id == id).first()
-    if not user:
-        raise HTTPException(status_code = status.HTTP_404_NOT_FOUND, detail = f'User with id {id} did not found')
-    return user
+# @app.post('/user', status_code = status.HTTP_201_CREATED, response_model = schemas.ShowUser, tags=['user'])
+# def user_add(request : schemas.User,db : Session = Depends(get_db)):
+#     # if len(request.password.encode("utf-8")) > 72:
+#     #     raise HTTPException(
+#     #         status_code=400,
+#     #         detail="Password must be 72 bytes or fewer"
+#     #     )
+
+#     # hass_password = pwd_cxt.hash(request.password)
+#     new_user = models.User(name=request.name, email=request.email, password = Hash.bcrypt(request.password))
+#     db.add(new_user)
+#     db.commit()
+#     db.refresh(new_user)
+
+#     return new_user
+
+# @app.get('/user/{id}', status_code = status.HTTP_302_FOUND , response_model = schemas.ShowUser, tags=['user'])
+# def show(id : int ,db : Session = Depends(get_db)):
+#     user = db.query(models.User).filter(models.User.id == id).first()
+#     if not user:
+#         raise HTTPException(status_code = status.HTTP_404_NOT_FOUND, detail = f'User with id {id} did not found')
+#     return user
 
