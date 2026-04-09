@@ -2,32 +2,20 @@ from fastapi import APIRouter,Depends,status, HTTPException
 from .. import schemas,models,database
 from sqlalchemy.orm import Session
 from ..hashing import Hash
+from ..repository import user
 
-router = APIRouter()
+router = APIRouter(
+                    tags = ['user'],
+                    prefix = '/user'
+)
 
 
 get_db = database.get_db
 
-@router.post('/user', status_code = status.HTTP_201_CREATED, response_model = schemas.ShowUser, tags=['user'])
+@router.post('/', status_code = status.HTTP_201_CREATED, response_model = schemas.ShowUser)
 def user_add(request : schemas.User,db : Session = Depends(get_db)):
-    # if len(request.password.encode("utf-8")) > 72:
-    #     raise HTTPException(
-    #         status_code=400,
-    #         detail="Password must be 72 bytes or fewer"
-    #     )
+    return user.user_add(request,db)
 
-    # hass_password = pwd_cxt.hash(request.password)
-    new_user = models.User(name=request.name, email=request.email, password = Hash.bcrypt(request.password))
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-
-    return new_user
-
-@router.get('/user/{id}', status_code = status.HTTP_302_FOUND , response_model = schemas.ShowUser, tags=['user'])
+@router.get('/{id}', status_code = status.HTTP_302_FOUND , response_model = schemas.ShowUser)
 def show(id : int ,db : Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.id == id).first()
-    if not user:
-        raise HTTPException(status_code = status.HTTP_404_NOT_FOUND, detail = f'User with id {id} did not found')
-    return user
-
+    return user.show(id,db)
