@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List,Optional
 
 # In show only inherit tht parent class if any logic is there or else you always import the base model and see for the config according to the version.
 
@@ -36,7 +36,16 @@ class ShowBlog(BaseModel):
     class Config():
         orm_mode= True
 
+class Login(BaseModel):
+    username : str
+    password : str
+    
+class Token(BaseModel):
+    access_token : str
+    token_type : str
 
+class TokenData(BaseModel):
+    username : Optional[str] = None
 
 
 
